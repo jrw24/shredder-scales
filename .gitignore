@@ -1,0 +1,10 @@
+## Ignored Directories ##
+/jupyter/
+/test/
+/figs/
+/.ipynb_checkpoints/
+
+## Ignored file types ##
+*.pdf
+*.png
+*.ipynb
