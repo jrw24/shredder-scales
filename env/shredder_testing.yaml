@@ -1,0 +1,15 @@
+name: shredder
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - setuptools
+  - wheel
+  - twine
+  - ipython
+  - numpy
+  - matplotlib
+  - seaborn
+  - plotly
+  - bokeh
+  - jupyterlab
