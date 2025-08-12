@@ -12,11 +12,9 @@ script_directory = os.path.dirname(script_path)
 sys.path.append('/home/jwangen/projects/shredder/shredder-scales/scripts/')
 
 ##
-import tunings
-import scales
-import notes
+import shredderscales.scales as scales
+import shredderscales.notes as notes
 import argparse
-import re 
 from matplotlib import pyplot as plt
 from matplotlib import patches
 
@@ -24,11 +22,13 @@ parser = argparse.ArgumentParser(
 			prog='shredder-scales',
 			description='lookup scales based on key and tuning')
 
-parser.add_argument('-s', '--scale' , help='scale of choice for returing notes')
-parser.add_argument('-t', '--tuning', 
+parser.add_argument('-s', '--scale' , required=True, 
+	help='scale of choice for returing notes')
+parser.add_argument('-t', '--tuning', required=False,
 	help='guitar tuning entered from lowest pitch to highest ex: CGCFAD or EbAbDbGbBbEb',
 	default='EADGBE')
-parser.add_argument('-k', '--key', help='key for this scale')
+parser.add_argument('-k', '--key', required=True,
+	help='key for this scale')
 parser.add_argument('-f', '--flats', default='auto', help='whether to use flat notation: [sharps, flats, auto]')
 parser.add_argument('-n', '--fretnumber', default='24', help='number of frets to use for plotting')
 parser.add_argument('-o', '--outdir', default=script_directory, help='directory for saving scripts' )
@@ -168,11 +168,7 @@ class Shredder(object):
 		"""
 		string_scales_list = []
 		max_octaves = 2
-		# one_octave = 12
-		# two_octave = 24
 		note_quantity = len(scale_notes_one_octave)
-		print('note_quantity', note_quantity)
-		# scale_notes_one_octave[one_octave] = scale_notes_one_octave[0]
 		current_scale = add_octave(scale_notes_one_octave.copy())
 
 		for i in range(len(tuning_list)):
@@ -263,10 +259,6 @@ class Shredder(object):
 								scale_notes_one_octave, 
 								tuning_list,
 								interval_list)
-
-		print('string_scales_list')
-		for s in string_scales_list:
-			print(s)
 
 		## trim scales to fretboard size
 		string_scales_list = self.mod_fretboard(string_scales_list)

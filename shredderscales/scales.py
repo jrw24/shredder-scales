@@ -24,7 +24,7 @@ class Scales(object):
 		| C | - | D | - | E | F | - | G | - | A | - | B | C |
 
 		C: minor
-		| C | - | D | Eb| - | F | - | G | - | A | Bb| - | C |
+		| C | - | D | Eb| - | F | - | G | Ab| - | Bb| - | C |
 
 		"""
 
