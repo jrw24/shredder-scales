@@ -23,7 +23,7 @@ class Scales(object):
 		self.scale = scale
 		self.key = key 
 		self.key_notes = key_notes
-		self.available_scales = available_scales
+
 
 	def get_scale_notes(self):
 		"""
