@@ -13,3 +13,4 @@ dependencies:
   - plotly
   - bokeh
   - jupyterlab
+  - nicegui

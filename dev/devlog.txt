@@ -1,0 +1,33 @@
+## development log for shredder-scales
+
+### Log for developing shredder scales:
+## started on 250812
+
+To Do:
+	- add a mode to print notes in scale degrees instead of notes
+	- add option to input custom scales
+	- add additional common scales
+	- test nicegui to see how this works
+
+Done:
+	250812
+	- created install package with setuptools and setup.py
+	- pushed test branch to github
+	- published initial working release to github
+	- tested nicegui but not satisfied, trying django instead
+	250813
+	- working with Django to build web app for shredder scales
+	- watched tutorials from:https://www.youtube.com/watch?v=ndJeakZJGeQ
+		- videos 1 and 2 in series
+		- followed partial tutorials here:https://docs.djangoproject.com/en/5.2/intro/tutorial01/
+			- tutorials 1 and 2
+		- follwed parital tutorial here: https://tutorial.djangogirls.org/en/
+	- looked into web hosting:
+		- render.com
+		- https://www.pythonanywhere.com/
+	- conditional dropdown tutorials (BugBytes): https://www.youtube.com/watch?v=YXzb4tw2IrI
+		- uses django and htmx, seems pretty close to what i want ideally
+	- got 4 menus working, and conditional drop downs
+
+
+	

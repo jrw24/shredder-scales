@@ -9,7 +9,7 @@ import os
 import subprocess
 script_path = os.path.abspath(__file__)
 script_directory = os.path.dirname(script_path)
-sys.path.append('/home/jwangen/projects/shredder/shredder-scales/scripts/')
+# sys.path.append('/home/jwangen/projects/shredder/shredder-scales/scripts/')
 
 ##
 import shredderscales.scales as scales
@@ -17,6 +17,7 @@ import shredderscales.notes as notes
 import argparse
 from matplotlib import pyplot as plt
 from matplotlib import patches
+import mpld3
 
 parser = argparse.ArgumentParser(
 			prog='shredder-scales',
@@ -32,15 +33,17 @@ parser.add_argument('-k', '--key', required=True,
 parser.add_argument('-f', '--flats', default='auto', help='whether to use flat notation: [sharps, flats, auto]')
 parser.add_argument('-n', '--fretnumber', default='24', help='number of frets to use for plotting')
 parser.add_argument('-o', '--outdir', default=script_directory, help='directory for saving scripts' )
+parser.add_argument('d', '--django', default='0', help='perform plotting on django server [0,1]')
 
 class Shredder(object):
-	def __init__(self, scale, key, tuning, flats, fretnumber, outdir):
+	def __init__(self, scale, key, tuning, flats, fretnumber, outdir, django):
 		self.scale = scale 
 		self.key = key 
 		self.tuning = tuning 
 		self.flats = flats 
 		self.fretnumber = int(fretnumber)
 		self.outdir = outdir
+		self.django = django
 
 	def check_valid_tuning(self):
 		if '#' in self.tuning and 'b' in self.tuning:
@@ -350,8 +353,14 @@ class Shredder(object):
 				ax.text(position-fretboard_adj, counter, note, ha='center', va='center', color='white')
 			counter +=1
 
-		figout = f'{self.outdir}/{self.tuning}-{self.key}-{self.scale}-scale.png'
-		plt.savefig(figout, format='png')
+		if self.django == '1':
+			html_fig = mpld3.fig_to_html(fig)
+			return html_fig
+		else: 
+			figout = f'{self.outdir}/{self.tuning}-{self.key}-{self.scale}-scale.png'
+			plt.savefig(figout, format='png')
+			return None
+
 		# open_image(figout)
 
 
@@ -397,10 +406,12 @@ def main():
 		args.tuning,
 		args.flats,
 		args.fretnumber,
-		args.outdir)
+		args.outdir,
+		args.django)
 
 	tuning_list, interval_list, string_scales_list = shredder.shred()
-	shredder.plotter(tuning_list, string_scales_list)
+	html_fig = shredder.plotter(tuning_list, string_scales_list)
+	return html_fig
 
 if __name__ == '__main__':
 	main()
