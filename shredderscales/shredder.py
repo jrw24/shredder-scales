@@ -1,46 +1,79 @@
 """
 Shredder-scales: 
-	- a python program to retrive notes from scales based on tuning
+	A python program to retrive and plot notes from scales based on tuning
+
+	Arguments:
+		Required:
+			--scale: scale to use for retrieiving notes, ex:'major'
+			--key: key to use for choosing notes, ex:'C'
+
+		Optional:
+			--tuning: tuning of guitar for plotting notes, ex:'CGCFAD'
+				- defaults to standard 6-string tuning: 'EADGBE'
+				- handles any number of strings, and is used to determine strings
+					- ex: 'F#BEADGBE' will be standard 8-string tuning
+			--flats: whether to use sharps or flats for determinig notes
+				- defaults to auto: will determine based on key, then tuning
+			--fretnumber: number of frets to plot, max==24 
+				- defaults to 24
+				- while 30 fret guitars do exist (thanks Ibanez), these are too rare to include for now
+			--mode: mode to display notes on scale['note', 'degree', 'interval']
+				- note will display the note at each position: 'C', 'Eb', ect.
+				- degree will display degree in that scale: '1', 'b2', '#4', ect.
+				- interval will display the distance from root note: 'M2', 'P5', 'm6'
+			--outdir: directory for saving output plot if run locally
+			--django: when run on django based web app, 
+				- use mpld3 to display plot instead of saving 
+				- see repo here for django app: https://github.com/jrw24/djshred
+	Outputs:
+		- generates a png plot of the guitar scale
 
 """
 
 import sys
 import os 
-import subprocess
-script_path = os.path.abspath(__file__)
-script_directory = os.path.dirname(script_path)
-sys.path.append('/home/jwangen/projects/shredder/shredder-scales/scripts/')
+current_directory = os.getcwd()
 
-##
 import shredderscales.scales as scales
 import shredderscales.notes as notes
 import argparse
+import matplotlib
+matplotlib.use('agg')
 from matplotlib import pyplot as plt
 from matplotlib import patches
+import mpld3
 
-parser = argparse.ArgumentParser(
+def parse_arguments():
+	parser = argparse.ArgumentParser(
 			prog='shredder-scales',
 			description='lookup scales based on key and tuning')
 
-parser.add_argument('-s', '--scale' , required=True, 
-	help='scale of choice for returing notes')
-parser.add_argument('-t', '--tuning', required=False,
-	help='guitar tuning entered from lowest pitch to highest ex: CGCFAD or EbAbDbGbBbEb',
-	default='EADGBE')
-parser.add_argument('-k', '--key', required=True,
-	help='key for this scale')
-parser.add_argument('-f', '--flats', default='auto', help='whether to use flat notation: [sharps, flats, auto]')
-parser.add_argument('-n', '--fretnumber', default='24', help='number of frets to use for plotting')
-parser.add_argument('-o', '--outdir', default=script_directory, help='directory for saving scripts' )
+	parser.add_argument('-s', '--scale' , #required=True, 
+		help='scale of choice for returing notes')
+	parser.add_argument('-t', '--tuning', required=False,
+		help='guitar tuning entered from lowest pitch to highest ex: CGCFAD or EbAbDbGbBbEb',
+		default='EADGBE')
+	parser.add_argument('-k', '--key', #required=True,
+		help='key for this scale')
+	parser.add_argument('-f', '--flats', default='auto', help='whether to use flat notation: [sharps, flats, auto]')
+	parser.add_argument('-n', '--fretnumber', default='24', help='number of frets to use for plotting')
+	parser.add_argument('-m', '--mode', default='note', help='mode to use for displaying notes: [note, degree, interval]')
+	parser.add_argument('-o', '--outdir', default=current_directory, help='directory for saving scripts' )
+	parser.add_argument('-d', '--django', default='0', help='perform plotting on django server [0,1]')
+	args = parser.parse_known_args()[0] ## return only known args
+	return args
+
 
 class Shredder(object):
-	def __init__(self, scale, key, tuning, flats, fretnumber, outdir):
+	def __init__(self, scale, key, tuning, flats, fretnumber, mode, outdir, django):
 		self.scale = scale 
 		self.key = key 
 		self.tuning = tuning 
 		self.flats = flats 
 		self.fretnumber = int(fretnumber)
+		self.mode = mode
 		self.outdir = outdir
+		self.django = django
 
 	def check_valid_tuning(self):
 		if '#' in self.tuning and 'b' in self.tuning:
@@ -140,7 +173,11 @@ class Shredder(object):
 						break
 		return interval_list
 
-	def build_scales_per_string(self, scale_notes_one_octave, tuning_list, interval_list):
+	def build_scales_per_string(self, 
+			scale_notes_one_octave, 
+			tuning_list, 
+			interval_list,
+			all_notes):
 		"""
 		Take a selected scale, and calculate note positions relative to tuning
 
@@ -151,6 +188,9 @@ class Shredder(object):
 			- tuning_list
 				- list with tuning at each string in ascending pitch
 				- ex: ['C', 'G', 'C', 'F', 'A', 'D']
+			- interval_list
+				- list with semitones between each string
+				- ex for CGCFAD: [7, 5, 5, 4, 5]
 
 		Outputs:
 			- string_scales_list
@@ -170,6 +210,7 @@ class Shredder(object):
 		max_octaves = 2
 		note_quantity = len(scale_notes_one_octave)
 		current_scale = add_octave(scale_notes_one_octave.copy())
+		all_notes_two_oct = add_octave(all_notes.copy())
 
 		for i in range(len(tuning_list)):
 			print(f'--starting string {i+1}--')
@@ -185,7 +226,20 @@ class Shredder(object):
 				## adjust tuning for first string
 				if i == 0:
 					current_note = tuning_list[i]
-					interval_offset = min([(k,v) for (k,v) in current_scale.items() if v ==current_note])[0]
+					## open string is present in the scale
+					if current_note in list(current_scale.values()):
+						interval_offset = min([(k,v) for (k,v) in current_scale.items() if v ==current_note])[0]
+					## open string is absent in the scale, look up fret with valid note
+					else:
+						first_note_index = min([(k,v) for (k,v) in all_notes_two_oct.items() if v ==current_note])[0]
+						current_note_index = first_note_index
+						counter= 0
+						while current_note not in list(current_scale.values()):
+							counter +=1
+							current_note_index+=counter
+							current_note = all_notes_two_oct[current_note_index]
+						interval_offset = min([(k,v) for (k,v) in current_scale.items() if v ==current_note])[0] - counter
+
 				## adjust tuning for subsequent strings
 				else:
 					interval_offset = interval_list[i-1]
@@ -195,8 +249,6 @@ class Shredder(object):
 				for j in next_scale:
 					if j < 0:
 						out_of_bounds_keys.append(j)
-					# elif j > note_quantity*max_octaves:
-					# 	out_of_bounds_keys.append(j)
 					else:
 						pass
 				for k in out_of_bounds_keys:
@@ -235,30 +287,34 @@ class Shredder(object):
 
 		## create a list with an entry for each string note
 		tuning_list = self.parse_tuning()
-
-		## create a Notes object for the given scale
-		note = notes.Notes(self.flats, self.key)
-
+		
 		## retrieve all possible notes dict for sharp or flat designation
-		all_notes = note.get_notes()
+		all_notes = notes.Notes.get_notes(self.flats)
 
 		## get interval distance for selected tuning
 		interval_list = self.calculate_tuning_intervals(tuning_list, all_notes)
 
 		## rearrange notes so that the key is the root note: notes[0] = key
-		key_notes = note.rearrange_notes(all_notes)
+		key_notes = notes.rearrange_notes(self.key, all_notes, self.flats) ## still has all notes
+
+		## look up scale in available scales and get the dict for that scale
+		scale_dict = scales.Scales.get_scale_intervals(self.scale)
 
 		## create a scale object with notes in proper order
-		scale = scales.Scales(self.scale, self.key, key_notes)
+		scale_notes_one_octave = scales.get_scale_notes(self.scale, scale_dict, self.key, key_notes)
+		print('1 oct!: ', scale_notes_one_octave)
 
-		## select only notes to be included in the scale of choice
-		scale_notes_one_octave = scale.get_scale_notes()
+		degree_map_dict, int_map_dict = scales.map_degrees_intervals(
+			self.scale, scale_notes_one_octave, scale_dict, scales.Scales.interval_dict)
+		print(degree_map_dict)
+		print(int_map_dict)
 
 		## make a list of scale_dicts for each string
 		string_scales_list = self.build_scales_per_string(
 								scale_notes_one_octave, 
 								tuning_list,
-								interval_list)
+								interval_list,
+								all_notes)
 
 		## trim scales to fretboard size
 		string_scales_list = self.mod_fretboard(string_scales_list)
@@ -266,7 +322,7 @@ class Shredder(object):
 		for s in string_scales_list:
 			print(s)
 
-		return (tuning_list, interval_list, string_scales_list)
+		return (tuning_list, interval_list, string_scales_list, scale_dict, degree_map_dict, int_map_dict)
 
 	def mod_fretboard(self, string_scales_list):
 		# octave = 12
@@ -296,7 +352,7 @@ class Shredder(object):
 		return string_scales_list
 
 
-	def plotter(self, tuning_list, string_scales_list):
+	def plotter(self, tuning_list, string_scales_list, scale_dict, degree_map_dict, int_map_dict):
 
 		## from Bang Wong: https://www.nature.com/articles/nmeth.1618
 		my_colors = { 
@@ -309,6 +365,9 @@ class Shredder(object):
 			'yellow' :'#fff71c',
 			'blue' :'#006eb9'
 		}
+
+		print('scale_dict', scale_dict)
+
 		fig, ax = plt.subplots(figsize= (12, 3))
 
 		frets = range(0,int(self.fretnumber))
@@ -347,11 +406,23 @@ class Shredder(object):
 				else:
 					circ = patches.Circle((position-fretboard_adj, counter), radius=0.4, color=my_colors['cyan'], fill=True)
 				ax.add_artist(circ)
-				ax.text(position-fretboard_adj, counter, note, ha='center', va='center', color='white')
+				if self.mode == 'note':
+					ax.text(position-fretboard_adj, counter, note, ha='center', va='center', color='white')
+				if self.mode == 'degree':
+					ax.text(position-fretboard_adj, counter, degree_map_dict[note], ha='center', va='center', color='white')
+				if self.mode == 'interval':
+					ax.text(position-fretboard_adj, counter, int_map_dict[note], ha='center', va='center', color='white')
+
 			counter +=1
 
-		figout = f'{self.outdir}/{self.tuning}-{self.key}-{self.scale}-scale.png'
-		plt.savefig(figout, format='png')
+		if self.django == '1':
+			html_fig = mpld3.fig_to_html(fig)
+			return html_fig
+		else: 
+			figout = f'{self.outdir}/{self.tuning}-{self.key}-{self.scale}-{self.mode}-scale.png'
+			plt.savefig(figout, format='png')
+			return None
+
 		# open_image(figout)
 
 
@@ -378,29 +449,78 @@ def add_octave(current_scale):
 	return current_scale
 	
 
-def open_image(path):
-	## from stack overflow: https://stackoverflow.com/questions/35304492/python-open-multiple-images-in-default-image-viewer
-	imageViewerFromCommandLine = {'linux':'xdg-open',
-								  'win32':'explorer',
-								  'darwin':'open'}[sys.platform]
-	subprocess.run([imageViewerFromCommandLine, path])
+def main(**kwargs):
+
+	print('running main!')
 
 
-def main():
-	args = parser.parse_args()
-	if not os.path.exists(args.outdir):
-		os.makedirs(args.outdir)
+		# print('running from command line')
+	args=parse_arguments()
+	print('args!!!', args)
+
+	### convert to dict
+	args_main = vars(args)
+	print('args_main', args_main)
+
+	print('kwargs', kwargs)
+
+	for a in args_main:
+		print(a)
+		if a not in kwargs:
+			if args_main[a] is not None:
+				kwargs[a] = args_main[a]
+		
+	print('kwargs <- args_main', kwargs)
+
+	print(kwargs)
+	## check required arguments
+	if 'scale' not in kwargs:
+		raise KeyError(f'scale not selected!')
+	if 'key' not in kwargs:
+		raise KeyError(f'key not selected!')
+
+	## add default values otherwise
+
+	if 'outdir' not in kwargs:
+		kwargs['outdir'] = current_directory
+	if 'tuning' not in kwargs:
+		kwargs['tuning'] = 'EADGBE'
+	if 'flats' not in kwargs:
+		kwargs['flats'] = 'auto'
+	if 'fretnumber' not in kwargs:
+		kwargs['fretnumber'] = '24'
+	if 'mode' not in kwargs:
+		kwargs['mode'] = 'note'
+	if 'django' not in kwargs:
+		kwargs['django'] = '0'
+
+	if not os.path.exists(kwargs['outdir']):
+		os.makedirs(kwargs['outdir'])
+
+	print(' --- ')
+	print('kwargs final: ', kwargs)
+	print(' --- ')
 
 	shredder = Shredder(
-		args.scale,
-		args.key,
-		args.tuning,
-		args.flats,
-		args.fretnumber,
-		args.outdir)
+		scale = kwargs['scale'],
+		key = kwargs['key'],
+		tuning = kwargs['tuning'],
+		flats = kwargs['flats'],
+		fretnumber = kwargs['fretnumber'],
+		mode = kwargs['mode'],
+		outdir = kwargs['outdir'],
+		django = kwargs['django']
+		)
 
-	tuning_list, interval_list, string_scales_list = shredder.shred()
-	shredder.plotter(tuning_list, string_scales_list)
+	tuning_list, interval_list, string_scales_list, scale_dict, degree_map_dict, int_map_dict = shredder.shred()
+	html_fig = shredder.plotter(tuning_list, string_scales_list, scale_dict, degree_map_dict, int_map_dict)
+	return html_fig
 
-if __name__ == '__main__':
-	main()
+
+# if __name__ == '__main__':
+# 	print('name is main!')
+# 	args = parse_arguments()
+# 	d = vars(args)
+# 	print('returned args:', args)
+# 	print(dir(args))
+# 	main(**d)
