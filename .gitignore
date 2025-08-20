@@ -53,6 +53,7 @@ cover/
 /dist/
 /misc/
 /env/
+/dev/
 
 
 ## Ignored file types ##

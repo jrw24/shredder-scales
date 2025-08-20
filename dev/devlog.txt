@@ -4,10 +4,8 @@
 ## started on 250812
 
 To Do:
-	- add a mode to print notes in scale degrees instead of notes
 	- add option to input custom scales
-	- add additional common scales
-	- test nicegui to see how this works
+	- add additional rare scales
 
 Done:
 	250812
@@ -28,6 +26,22 @@ Done:
 	- conditional dropdown tutorials (BugBytes): https://www.youtube.com/watch?v=YXzb4tw2IrI
 		- uses django and htmx, seems pretty close to what i want ideally
 	- got 4 menus working, and conditional drop downs
+
+	250818
+	- added django server option using mpld3 to display matplotlib plots as html
+
+	250819
+	- fixed issue with first string not finding correct intervals when open note not present in scale
+	- added common scales to Scales object
+	- added scale degrees in Scales.available_scales
+	- added interval_dict in Scales
+
+	250820
+	- reworked Scales and Notes objects to not require inputs to instantiate class
+		-easier access to scales and notes
+	- added --mode option to output plots in [note, degree, interval] modes 
+		-created map_degrees_intervals function in scales.py
+
 
 
 	
