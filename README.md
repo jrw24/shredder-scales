@@ -40,13 +40,19 @@ pip install shredderscales
 
 ## Usage
 
-example command line usage
+example command line usage:
 
 ```bash
 shredder-scales --scale='major' --key='F' --tuning='CGCFAD' --outdir='/path/to/outdir'
 ```
 
-example python usage
+to print out all available scales:
+
+```bash
+shredder-scales-available
+```
+
+example python usage"
 
 ```python
 from shredderscales import shredder
