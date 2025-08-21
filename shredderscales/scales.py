@@ -119,6 +119,7 @@ class Scales(object):
 		# self.key = key 
 		# self.key_notes = key_notes
 
+	@staticmethod
 	def get_scale_intervals(scale):
 		"""
 		search available scales and return entry if scale is a match
@@ -180,10 +181,26 @@ def get_scale_notes(scale, scale_dict, key, key_notes):
 
 	for position, note in key_notes.items():
 		if position in note_positions:
-			final_scale[position] = note   
+			final_scale[position] = note 
+
+	if final_scale[0] != key:
+		raise ValueError(f'key_notes: {key_notes} not arranged with key {key} at 0 index')
+
 	return final_scale
 
 def map_degrees_intervals(scale, one_oct, scale_dict, interval_dict):
+	"""
+	
+	Inputs:
+		- scale: name of the scale, ex: 'major'
+		- scale_dict: dict with name:[[intervals]:[degrees]]
+		- one_oct: all valid notes in the scale for a single octave
+		- interval_dict is dict with interval notation relative to root note
+
+	Outputs:
+		- degree_map_dict: dict with scale degrees instead of notes
+		- int_map_dict: dict with intervals instead of notes
+	"""
 
 	### get scale degrees:
 	degree = dict(zip(scale_dict[scale][0], scale_dict[scale][1]))

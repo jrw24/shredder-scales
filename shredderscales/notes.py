@@ -49,7 +49,6 @@ class Notes(object):
 	def get_notes(sharps_or_flats):
 
 		note_choice = sharps_or_flats.lower()
-		print(f'using notes: {note_choice}')
 
 		if note_choice == 'sharps':
 			notes = Notes.sharps
@@ -76,17 +75,14 @@ def rearrange_notes(key, notes, sharps_or_flats):
 				6: 'A#', 7: 'B', 8: 'C', 9: 'C#', 10: 'D', 11: 'D#'}
 	"""
 
-	print(len(notes), 'note length!')
-
 	## First find position of the key note
 	try:
 		for position, note in notes.items():
-			print(position, note)
 			if note == key:
 				key_index = position
 		# key_index = notes[self.key]
 	except KeyError:
-		print('key is not found in selected notes')
+		print(f'key: {key} is not found in selected notes')
 		print(f'currently notes are: {sharps_or_flats}')
 		print(notes)
 

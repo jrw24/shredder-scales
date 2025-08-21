@@ -43,28 +43,58 @@ from matplotlib import pyplot as plt
 from matplotlib import patches
 import mpld3
 
-def parse_arguments():
+def parse_arguments(args=None):
 	parser = argparse.ArgumentParser(
 			prog='shredder-scales',
 			description='lookup scales based on key and tuning')
 
-	parser.add_argument('-s', '--scale' , #required=True, 
+	parser.add_argument('-s', '--scale', #required=False, 
+		action='store_false', default=False,
 		help='scale of choice for returing notes')
 	parser.add_argument('-t', '--tuning', required=False,
 		help='guitar tuning entered from lowest pitch to highest ex: CGCFAD or EbAbDbGbBbEb',
 		default='EADGBE')
-	parser.add_argument('-k', '--key', #required=True,
+	parser.add_argument('-k', '--key', #required=False,
+		action='store_false', default=False,
 		help='key for this scale')
 	parser.add_argument('-f', '--flats', default='auto', help='whether to use flat notation: [sharps, flats, auto]')
 	parser.add_argument('-n', '--fretnumber', default='24', help='number of frets to use for plotting')
 	parser.add_argument('-m', '--mode', default='note', help='mode to use for displaying notes: [note, degree, interval]')
 	parser.add_argument('-o', '--outdir', default=current_directory, help='directory for saving scripts' )
 	parser.add_argument('-d', '--django', default='0', help='perform plotting on django server [0,1]')
-	args = parser.parse_known_args()[0] ## return only known args
+	args, _ = parser.parse_known_args() ## return only known args
 	return args
 
 
 class Shredder(object):
+	"""
+	Core object that contains functions for finding scales
+
+	functions internal to object:
+		- check_valid_tuning(self): enforce only sharps or only flats in tuning
+		- set_key_accidentals(self): when --flats==auto, set to sharps or flats
+		- correct_key_tuning_conflict(self, tuning_list):
+			enforce self.flats and tuning_list to use same accidentals as self.key
+		- parse_tuning(self): split tuning entry into list with one note per string
+		- calculate_tuning_intervals(self, tuning_list, note_dict):
+			calculate intervals between notes in tuning
+		- build_scales_per_string(self, 
+			scale_notes_one_octave, 
+			tuning_list, 
+			interval_list,
+			all_notes): 
+			For a selected scale, calculate note positions on each string 
+		- mod_fretboard(self, string_scales_list):
+			trim the length of the fretboard if self.fretnumber < 24
+		
+	functions called by main():
+		- shred(self):
+			core function that performs all calculations
+		- plotter(self, tuning_list, string_scales_list, scale_dict, degree_map_dict, int_map_dict)
+			plotting function for generating image of scale on fretboard
+
+	"""
+
 	def __init__(self, scale, key, tuning, flats, fretnumber, mode, outdir, django):
 		self.scale = scale 
 		self.key = key 
@@ -77,7 +107,6 @@ class Shredder(object):
 
 	def check_valid_tuning(self):
 		if '#' in self.tuning and 'b' in self.tuning:
-			print(self.tuning)
 			raise Exception('Invalid tuning containg sharps(#) and flats(b)')
 			sys.exit()
 
@@ -92,6 +121,37 @@ class Shredder(object):
 			self.flats = 'flats'
 		else: ## default to sharps
 			self.flats = 'sharps'
+
+	def correct_key_tuning_conflict(self, tuning_list):
+		"""
+		If key clashes with self.flats:
+			ex: key='Bb', self.flats='sharps'
+
+			Then:
+				reset the flats or sharps to match key
+				replace flats or sharps in tuning_list to match key
+
+		Output:
+			- self.flats matching the key accidental
+			- tuning_list with all notes matching the key accidental
+		"""
+
+		if '#' in self.key:
+			key_acc = 'sharps'
+		elif 'b' in self.key:
+			key_acc = 'flats'
+		else:
+			key_acc = self.flats 
+
+		if key_acc != self.flats:
+			## clash here
+			self.flats = key_acc
+
+		if self.flats == 'sharps':
+			tuning_list = notes.convert_flats_to_sharps(tuning_list)
+		if self.flats == 'flats':
+			tuning_list = notes.convert_sharps_to_flats(tuning_list)
+		return tuning_list
 
 	def parse_tuning(self):
 		"""
@@ -213,7 +273,6 @@ class Shredder(object):
 		all_notes_two_oct = add_octave(all_notes.copy())
 
 		for i in range(len(tuning_list)):
-			print(f'--starting string {i+1}--')
 			## check to see if the key matches first string in tuning
 			if i == 0 and tuning_list[i] == current_scale[i]: 
 				## no adjustment needed, simply add first string to output list
@@ -278,16 +337,18 @@ class Shredder(object):
 			- scale_notes 
 		"""
 		## first check that tuning is valid
-		self.check_valid_tuning()
+		# self.check_valid_tuning()
 
 		## set accidentals to use if not specified
 		if self.flats == 'auto':
 			self.set_key_accidentals()
-			print(f'using {self.flats} as accidentals')
 
 		## create a list with an entry for each string note
 		tuning_list = self.parse_tuning()
 		
+		## correct conflicts with key accidentals and self.key
+		tuning_list = self.correct_key_tuning_conflict(tuning_list)
+
 		## retrieve all possible notes dict for sharp or flat designation
 		all_notes = notes.Notes.get_notes(self.flats)
 
@@ -302,12 +363,9 @@ class Shredder(object):
 
 		## create a scale object with notes in proper order
 		scale_notes_one_octave = scales.get_scale_notes(self.scale, scale_dict, self.key, key_notes)
-		print('1 oct!: ', scale_notes_one_octave)
 
 		degree_map_dict, int_map_dict = scales.map_degrees_intervals(
 			self.scale, scale_notes_one_octave, scale_dict, scales.Scales.interval_dict)
-		print(degree_map_dict)
-		print(int_map_dict)
 
 		## make a list of scale_dicts for each string
 		string_scales_list = self.build_scales_per_string(
@@ -318,9 +376,6 @@ class Shredder(object):
 
 		## trim scales to fretboard size
 		string_scales_list = self.mod_fretboard(string_scales_list)
-		print('string_scales_list, trimmed')
-		for s in string_scales_list:
-			print(s)
 
 		return (tuning_list, interval_list, string_scales_list, scale_dict, degree_map_dict, int_map_dict)
 
@@ -363,55 +418,114 @@ class Shredder(object):
 			'green' :'#00c48f',
 			'pink' :'#eb68c0',
 			'yellow' :'#fff71c',
-			'blue' :'#006eb9'
+			'blue' :'#006eb9',
+			'fretboardcolor' : '#6e493982',
 		}
-
-		print('scale_dict', scale_dict)
 
 		fig, ax = plt.subplots(figsize= (12, 3))
 
 		frets = range(0,int(self.fretnumber))
 		strings = range(0,len(tuning_list))
 
-		xmin = 0
+		xmin = -1 #0
 		xmax = self.fretnumber
 		ymin = 0
 		ymax = len(tuning_list)+1
 		fretboard_adj = 0.5
-
 		
 		fret_labels = list(range(0,self.fretnumber+1))
 		fret_label_positions = [x-fretboard_adj for x in fret_labels]
 
-		ax.set_title(f'{self.key} {self.scale} scale')
+		ax.set_title(f'Key: {self.key},    Scale: {self.scale},    Mode: {self.mode}')
 		ax.set_yticks([])
 		ax.set_xticks(fret_label_positions, fret_labels)
 
 		ax.set_xlim(xmin-fretboard_adj*2,xmax)
 		# ax.set_ylim(ymin,ymax)
 		ax.set_ylim(ymin-fretboard_adj,ymax+fretboard_adj)
-		ax.hlines(ymax-fretboard_adj, xmin, xmax, linestyles ='solid', color = 'black')
-		ax.hlines(ymin+fretboard_adj, xmin, xmax, linestyles ='solid', color = 'black')
+
+		## draw fretboard background:
+		fretboard_bg = patches.Rectangle(
+			(0, ymin+fretboard_adj ),
+			self.fretnumber,
+			len(tuning_list),
+			color=my_colors['fretboardcolor'],
+			zorder=0)
+		ax.add_patch(fretboard_bg)
+
+		## add fret dots:
+		fret_dots = [3,5,7,9,12,15,17,19,21,24]
+		for dot in fret_dots:
+			if dot <= self.fretnumber:
+				if dot % 12 == 0:
+					# ax.scatter(dot, )
+					ax.scatter(dot-fretboard_adj, fretboard_adj*3, color='white', s=16, zorder=1)
+					ax.scatter(dot-fretboard_adj, ymax-fretboard_adj*3, color='white', s=16, zorder=1)
+					pass
+				else:
+					ax.scatter(dot-fretboard_adj, ymax/2, color='white', s=16, zorder=1)
+
+
+		ax.hlines(ymax-fretboard_adj, 0, xmax, linestyles ='solid', color = 'black')
+		ax.hlines(ymin+fretboard_adj, 0, xmax, linestyles ='solid', color = 'black')
 
 		for fret in frets:
 			ax.vlines(fret, ymin+0.5, ymax-0.5, linestyles = 'solid', color = 'black')
 		for guitar_string in strings:
 			ax.hlines(ymax-guitar_string-1, xmin, xmax, linestyles ='solid', color = 'grey')
+		note_counter = 1
+		for open_note in tuning_list:
+			ax.text(xmin-0.5, note_counter, open_note, ha='center', va='center', color='black', fontsize=14)
+			note_counter+=1
 		
+		current_z = max([_.zorder for _ in ax.get_children()])
+
 		counter = 1
 		for gs in string_scales_list:
 			for position, note in gs.items():
 				if note == self.key:
-					circ = patches.Circle((position-fretboard_adj, counter), radius=0.4, color=my_colors['orange'])
+					circ = patches.Circle(
+						(position-fretboard_adj, counter), 
+						radius=0.4, 
+						color=my_colors['orange'], 
+						alpha=0.9, 
+						zorder=current_z+1)
 				else:
-					circ = patches.Circle((position-fretboard_adj, counter), radius=0.4, color=my_colors['cyan'], fill=True)
+					circ = patches.Circle(
+						(position-fretboard_adj, counter), 
+						radius=0.4, 
+						color=my_colors['cyan'], 
+						fill=True,
+						alpha=0.9,
+						zorder=current_z+1)
 				ax.add_artist(circ)
 				if self.mode == 'note':
-					ax.text(position-fretboard_adj, counter, note, ha='center', va='center', color='white')
+					ax.text(
+						position-fretboard_adj, 
+						counter, 
+						note, 
+						ha='center', 
+						va='center', 
+						color='white',
+						zorder=current_z+2)
 				if self.mode == 'degree':
-					ax.text(position-fretboard_adj, counter, degree_map_dict[note], ha='center', va='center', color='white')
+					ax.text(
+						position-fretboard_adj, 
+						counter, 
+						degree_map_dict[note], 
+						ha='center', 
+						va='center', 
+						color='white',
+						zorder=current_z+2)
 				if self.mode == 'interval':
-					ax.text(position-fretboard_adj, counter, int_map_dict[note], ha='center', va='center', color='white')
+					ax.text(
+						position-fretboard_adj, 
+						counter, 
+						int_map_dict[note], 
+						ha='center', 
+						va='center', 
+						color='white',
+						zorder=current_z+2)
 
 			counter +=1
 
@@ -420,7 +534,7 @@ class Shredder(object):
 			return html_fig
 		else: 
 			figout = f'{self.outdir}/{self.tuning}-{self.key}-{self.scale}-{self.mode}-scale.png'
-			plt.savefig(figout, format='png')
+			plt.savefig(figout, format='png', bbox_inches='tight')
 			return None
 
 		# open_image(figout)
@@ -450,37 +564,38 @@ def add_octave(current_scale):
 	
 
 def main(**kwargs):
+	"""
+	main function for running shredderscales
 
-	print('running main!')
+	Inputs:
+		command line arguments or dictionary of keyword args
 
+		first dictionary of kwargs is passed
+		then command line arguments are parsed using parse_arguments()
+			this is a way of adding defaults while also allowing argparse
 
-		# print('running from command line')
+	Outputs:
+		html_fig
+			saved to file with django=0
+			output to html with django=1
+	"""
+
 	args=parse_arguments()
-	print('args!!!', args)
-
 	### convert to dict
 	args_main = vars(args)
-	print('args_main', args_main)
-
-	print('kwargs', kwargs)
-
 	for a in args_main:
-		print(a)
 		if a not in kwargs:
 			if args_main[a] is not None:
 				kwargs[a] = args_main[a]
-		
-	print('kwargs <- args_main', kwargs)
 
-	print(kwargs)
+	## reworking for unit tests:
 	## check required arguments
-	if 'scale' not in kwargs:
+	if kwargs['scale'] == False:
 		raise KeyError(f'scale not selected!')
-	if 'key' not in kwargs:
+	if kwargs['key'] == False:
 		raise KeyError(f'key not selected!')
 
 	## add default values otherwise
-
 	if 'outdir' not in kwargs:
 		kwargs['outdir'] = current_directory
 	if 'tuning' not in kwargs:
@@ -497,10 +612,6 @@ def main(**kwargs):
 	if not os.path.exists(kwargs['outdir']):
 		os.makedirs(kwargs['outdir'])
 
-	print(' --- ')
-	print('kwargs final: ', kwargs)
-	print(' --- ')
-
 	shredder = Shredder(
 		scale = kwargs['scale'],
 		key = kwargs['key'],
@@ -515,12 +626,3 @@ def main(**kwargs):
 	tuning_list, interval_list, string_scales_list, scale_dict, degree_map_dict, int_map_dict = shredder.shred()
 	html_fig = shredder.plotter(tuning_list, string_scales_list, scale_dict, degree_map_dict, int_map_dict)
 	return html_fig
-
-
-# if __name__ == '__main__':
-# 	print('name is main!')
-# 	args = parse_arguments()
-# 	d = vars(args)
-# 	print('returned args:', args)
-# 	print(dir(args))
-# 	main(**d)
