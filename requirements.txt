@@ -2,3 +2,4 @@ setuptools
 wheel
 twine
 matplotlib>=3.10
+mpld3
