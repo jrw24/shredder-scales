@@ -1,6 +1,6 @@
 # shredder-scales
 
-shredder-scales is an application that allows look-up of 
+shredder-scales is a python package that allows look-up of 
 guitar scales given a key, scale, and tuning and outputs
 a plot showing the valid note positions on the fretboard. 
 
