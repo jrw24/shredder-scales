@@ -120,6 +120,17 @@ class Scales(object):
 		# self.key_notes = key_notes
 
 	@staticmethod
+	def print_all_scales():
+		"""
+		print available scales to terminal
+		"""
+		all_scales = list(Scales.available_scales.keys())
+
+		for s in all_scales:
+			print(s)
+
+
+	@staticmethod
 	def get_scale_intervals(scale):
 		"""
 		search available scales and return entry if scale is a match

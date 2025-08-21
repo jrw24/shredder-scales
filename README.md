@@ -1,6 +1,6 @@
 # shredder-scales
 
-shredder-scales is an application that allows look-up of 
+shredder-scales is a python package that allows look-up of 
 guitar scales given a key, scale, and tuning and outputs
 a plot showing the valid note positions on the fretboard. 
 
@@ -31,7 +31,6 @@ pip install shredderscales
 	--flats: whether to use sharps or flats for accidentals
 	--fretnumber: number of frets to plot, max==24 
 	--mode: mode to display notes on scale['note', 'degree', 'interval']
-	--mode: mode to display notes on scale['note', 'degree', 'interval']
 		- note will display the note at each position: 'C', 'Eb', ect.
 		- degree will display degree in that scale: '1', 'b2', '#4', ect.
 		- interval will display the distance from root note: 'M2', 'P5', 'm6'
@@ -41,13 +40,19 @@ pip install shredderscales
 
 ## Usage
 
-example command line usage
+example command line usage:
 
 ```bash
 shredder-scales --scale='major' --key='F' --tuning='CGCFAD' --outdir='/path/to/outdir'
 ```
 
-example python usage
+to print out all available scales:
+
+```bash
+shredder-scales-available
+```
+
+example python usage"
 
 ```python
 from shredderscales import shredder
