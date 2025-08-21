@@ -31,7 +31,6 @@ pip install shredderscales
 	--flats: whether to use sharps or flats for accidentals
 	--fretnumber: number of frets to plot, max==24 
 	--mode: mode to display notes on scale['note', 'degree', 'interval']
-	--mode: mode to display notes on scale['note', 'degree', 'interval']
 		- note will display the note at each position: 'C', 'Eb', ect.
 		- degree will display degree in that scale: '1', 'b2', '#4', ect.
 		- interval will display the distance from root note: 'M2', 'P5', 'm6'
