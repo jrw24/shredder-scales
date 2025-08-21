@@ -21,3 +21,6 @@ setup(
 ## shredder-scales --scale='major' --key='F' --tuning='CGCFAD' --outdir='/home/jwangen/projects/testing'
 
 ## shredder.main(scale='major', key='A',tuning='CGCFAD',outdir='/home/jwangen/projects/testing')
+
+## development mode:
+## python -m pip install -e .

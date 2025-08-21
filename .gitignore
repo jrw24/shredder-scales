@@ -54,6 +54,7 @@ cover/
 /misc/
 /env/
 /dev/
+/.vs/
 
 
 ## Ignored file types ##
@@ -63,4 +64,4 @@ cover/
 *.ipynb_checkpoints
 *Zone.Identifier
 *shredder_testing.yaml
-
+*.sqlite

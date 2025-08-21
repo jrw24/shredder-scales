@@ -41,6 +41,7 @@ Done:
 		-easier access to scales and notes
 	- added --mode option to output plots in [note, degree, interval] modes 
 		-created map_degrees_intervals function in scales.py
+	- added zorder to plotting circels and text
 
 
 
