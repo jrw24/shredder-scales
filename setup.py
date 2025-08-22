@@ -19,6 +19,7 @@ setup(
 			'shredder-scales-available = shredderscales.scales:Scales.print_all_scales'
 			]
 	},
+	description= 'Guitar-scales for any key and tuning',
 	long_description=description,
 	long_description_content_type='text/markdown'
 )
