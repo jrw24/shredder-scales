@@ -124,8 +124,14 @@ class Scales(object):
 		"""
 		print available scales to terminal
 		"""
-		all_scales = list(Scales.available_scales.keys())
+		avail_scales = list(Scales.available_scales.keys())
+		alias_scales = []
+		a = Scales.scale_alias
+		for i in a:
+			for j in a[i]:
+				alias_scales.append(j)
 
+		all_scales = avail_scales+alias_scales
 		for s in all_scales:
 			print(s)
 
@@ -157,7 +163,7 @@ class Scales(object):
 					out_scale[scale] = Scales.available_scales[scale]
 
 		if len(out_scale) == 1: ## return only 1 scale
-			return out_scale
+			return out_scale, scale
 		else:
 			raise ValueError(f'chosen scale {scale} is not included currently')
 

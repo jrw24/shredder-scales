@@ -3,6 +3,7 @@ import shredderscales.scales as scales
 import shredderscales.notes as notes
 import shredderscales.shredder as shredder
 from typing import Dict
+import sys
 
 
 ### shredder.main(scale='major', key='A',tuning='CGCFAD',outdir='/home/jwangen/projects/testing')
@@ -49,7 +50,10 @@ def test_make_Shredder_object_all_options_included(v):
 	assert type(s.key) == str
 	assert type(s.tuning) == str
 
-def test_main_key_scale_tuning_only():
+def test_main_key_scale_tuning_only(monkeypatch):
+
+	## passing empty arguments
+	monkeypatch.setattr(sys, 'argv', [''])
 
 	kwargs = {
 		'key': 'A',
@@ -60,7 +64,30 @@ def test_main_key_scale_tuning_only():
 	html_fig = shredder.main(**kwargs)
 	assert html_fig is None
 
-def test_main_no_key():
+def test_main_key_scale_sys_argv_entry(monkeypatch):
+
+	## passing empty arguments
+	monkeypatch.setattr(
+		sys,
+		'argv', 
+		[
+			sys.argv[0],
+			'--key', 'A',
+			'--scale', 'major',
+			'--tuning', 'EADGBE',
+		]
+	)
+	kwargs = {
+		}
+
+	html_fig = shredder.main(**kwargs)
+	assert html_fig is None
+
+
+def test_main_no_key(monkeypatch):
+
+	## passing empty arguments
+	monkeypatch.setattr(sys, 'argv', [''])
 
 	kwargs = {
 		'scale': 'major',
@@ -69,7 +96,10 @@ def test_main_no_key():
 	with pytest.raises(KeyError):
 		html_fig = shredder.main(**kwargs)
 
-def test_main_no_scale():
+def test_main_no_scale(monkeypatch):
+
+	## passing empty arguments
+	monkeypatch.setattr(sys, 'argv', [''])
 
 	kwargs = {
 		'key': 'A',
@@ -79,7 +109,11 @@ def test_main_no_scale():
 		html_fig = shredder.main(**kwargs)
 
 
-def test_main_key_scale_only():
+def test_main_key_scale_only(monkeypatch):
+
+	## passing empty arguments
+	monkeypatch.setattr(sys, 'argv', [''])
+	
 	kwargs = {
 		'scale': 'major',
 		'key': 'A'
@@ -89,5 +123,39 @@ def test_main_key_scale_only():
 	assert html_fig is None
 
 
+def test_main_set_django_for_html_output_kwargs(monkeypatch):
+
+	## passing empty arguments
+	monkeypatch.setattr(sys, 'argv', [''])
 	
+	kwargs = {
+		'key': 'A',
+		'scale': 'major',
+		'tuning': 'CGCFAD',
+		'django': '1'
+		}
+
+	html_fig = shredder.main(**kwargs)
+	### check that an html is output as str
+	assert type(html_fig) is str
+
+def test_main_set_django_for_html_output_sys_argv(monkeypatch):
+
+	## passing empty arguments
+	monkeypatch.setattr(
+		sys,
+		'argv', 
+		[
+			sys.argv[0],
+			'--key', 'A',
+			'--scale', 'major',
+			'--tuning', 'EADGBE',
+			'--django', '1',
+		]
+	)
+	kwargs = {
+		}
+	html_fig = shredder.main(**kwargs)
+	### check that an html is output as str
+	assert type(html_fig) is str
 

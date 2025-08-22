@@ -5,7 +5,7 @@ with open("README.md", 'r') as f:
 
 setup(
 	name='shredderscales',
-	version='1.0.2',
+	version='1.0.3',
 	author='Jamie Wangen',
 	packages=find_packages(
 		include=['shredderscales', 'shredderscales.*']),

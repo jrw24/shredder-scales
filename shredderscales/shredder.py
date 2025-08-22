@@ -359,7 +359,7 @@ class Shredder(object):
 		key_notes = notes.rearrange_notes(self.key, all_notes, self.flats) ## still has all notes
 
 		## look up scale in available scales and get the dict for that scale
-		scale_dict = scales.Scales.get_scale_intervals(self.scale)
+		scale_dict, self.scale = scales.Scales.get_scale_intervals(self.scale)
 
 		## create a scale object with notes in proper order
 		scale_notes_one_octave = scales.get_scale_notes(self.scale, scale_dict, self.key, key_notes)
@@ -563,7 +563,7 @@ def add_octave(current_scale):
 	return current_scale
 	
 
-def main(**kwargs):
+def main(argv=sys.argv, **kwargs):
 	"""
 	main function for running shredderscales
 
@@ -579,8 +579,8 @@ def main(**kwargs):
 			saved to file with django=0
 			output to html with django=1
 	"""
-
-	args=parse_arguments()
+	# print(args)
+	args=parse_arguments(argv)
 	### convert to dict
 	args_main = vars(args)
 	for a in args_main:
@@ -626,3 +626,7 @@ def main(**kwargs):
 	tuning_list, interval_list, string_scales_list, scale_dict, degree_map_dict, int_map_dict = shredder.shred()
 	html_fig = shredder.plotter(tuning_list, string_scales_list, scale_dict, degree_map_dict, int_map_dict)
 	return html_fig
+
+if __name__ == '__main__':
+	main(args=sys.argv)
+
