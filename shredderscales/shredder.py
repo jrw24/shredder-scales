@@ -49,13 +49,13 @@ def parse_arguments(args=None):
 			description='lookup scales based on key and tuning')
 
 	parser.add_argument('-s', '--scale', #required=False, 
-		action='store_false', default=False,
+ 		default=False,
 		help='scale of choice for returing notes')
 	parser.add_argument('-t', '--tuning', required=False,
 		help='guitar tuning entered from lowest pitch to highest ex: CGCFAD or EbAbDbGbBbEb',
 		default='EADGBE')
 	parser.add_argument('-k', '--key', #required=False,
-		action='store_false', default=False,
+		default=False,
 		help='key for this scale')
 	parser.add_argument('-f', '--flats', default='auto', help='whether to use flat notation: [sharps, flats, auto]')
 	parser.add_argument('-n', '--fretnumber', default='24', help='number of frets to use for plotting')
