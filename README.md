@@ -9,9 +9,9 @@ without restriction to standard tunings. The number of guitar
 strings will be set based on the entered tuning.
 
 For example: 
-	* 'EADGBE' will set standard 6-string tuning
-	* 'G#D#G#C#F#A#D#' will set drop G# 7-string tuning
-	* 'F#BEADGBE' will set standard 8-string tuning
+* 'EADGBE' will set standard 6-string tuning
+* 'G#D#G#C#F#A#D#' will set drop G# 7-string tuning
+* 'F#BEADGBE' will set standard 8-string tuning
 
 ## Installation
 
