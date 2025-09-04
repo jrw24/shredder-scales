@@ -19,7 +19,7 @@ def v() -> Dict:
 			'fretnumber': '24',
 			'mode' : 'note',
 			'outdir' : '.',
-			'django' : '0'
+			'django' : '0',
 		}
 	}
 	return test_vars
@@ -41,7 +41,8 @@ def test_make_Shredder_object_all_options_included(v):
 		fretnumber = svars['fretnumber'],
 		mode = svars['mode'],
 		outdir = svars['outdir'],
-		django = svars['django']
+		django = svars['django'],
+		custom_scale = None
 
 		)
 
@@ -159,3 +160,41 @@ def test_main_set_django_for_html_output_sys_argv(monkeypatch):
 	### check that an html is output as str
 	assert type(html_fig) is str
 
+def test_main_custom_scale_command_line(monkeypatch):
+
+	monkeypatch.setattr(
+		sys,
+		'argv', 
+		[
+			sys.argv[0],
+			'--key', 'A',
+			'--scale', '*custom*',
+			'--tuning', 'EADGBE',
+			'--scale_name', 'newscale',
+			'--scale_intervals', '0,1,4,7,8,10,11'
+		]
+	)
+	kwargs = {
+		}
+
+	html_fig = shredder.main(**kwargs)
+	assert html_fig is None
+
+
+def test_main_set_django_for_html_output_kwargs_custom_scale(monkeypatch):
+
+	## passing empty arguments
+	monkeypatch.setattr(sys, 'argv', [''])
+	
+	kwargs = {
+		'key': 'A',
+		'scale': 'major',
+		'tuning': 'CGCFAD',
+		'django': '1',
+		'scale_name': 'newscale',
+		'scale_intervals': '0,1,4,7,8,10,11'
+		}
+
+	html_fig = shredder.main(**kwargs)
+	### check that an html is output as str
+	assert type(html_fig) is str

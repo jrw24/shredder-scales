@@ -62,8 +62,8 @@ def parse_arguments(args=None):
 	parser.add_argument('-m', '--mode', default='note', help='mode to use for displaying notes: [note, degree, interval]')
 	parser.add_argument('-o', '--outdir', default=current_directory, help='directory for saving scripts' )
 	parser.add_argument('-d', '--django', default='0', help='perform plotting on django server [0,1]')
-	args, _ = parser.parse_known_args() ## return only known args
-	return args
+	args, extra_args = parser.parse_known_args() ## return only known args
+	return args, extra_args
 
 
 class Shredder(object):
@@ -95,7 +95,7 @@ class Shredder(object):
 
 	"""
 
-	def __init__(self, scale, key, tuning, flats, fretnumber, mode, outdir, django):
+	def __init__(self, scale, key, tuning, flats, fretnumber, mode, outdir, django, custom_scale):
 		self.scale = scale 
 		self.key = key 
 		self.tuning = tuning 
@@ -104,6 +104,7 @@ class Shredder(object):
 		self.mode = mode
 		self.outdir = outdir
 		self.django = django
+		self.custom_scale = custom_scale
 
 	def check_valid_tuning(self):
 		if '#' in self.tuning and 'b' in self.tuning:
@@ -359,7 +360,11 @@ class Shredder(object):
 		key_notes = notes.rearrange_notes(self.key, all_notes, self.flats) ## still has all notes
 
 		## look up scale in available scales and get the dict for that scale
-		scale_dict, self.scale = scales.Scales.get_scale_intervals(self.scale)
+		if self.scale == '*custom*':
+			scale_dict = self.custom_scale
+			self.scale = list(scale_dict.keys())[0]
+		else:
+			scale_dict, self.scale = scales.Scales.get_scale_intervals(self.scale)
 
 		## create a scale object with notes in proper order
 		scale_notes_one_octave = scales.get_scale_notes(self.scale, scale_dict, self.key, key_notes)
@@ -422,7 +427,7 @@ class Shredder(object):
 			'fretboardcolor' : '#6e493982',
 		}
 
-		fig, ax = plt.subplots(figsize= (12, 3))
+		fig, ax = plt.subplots(figsize= (12, 3.5))
 
 		frets = range(0,int(self.fretnumber))
 		strings = range(0,len(tuning_list))
@@ -436,12 +441,17 @@ class Shredder(object):
 		fret_labels = list(range(0,self.fretnumber+1))
 		fret_label_positions = [x-fretboard_adj for x in fret_labels]
 
-		ax.set_title(f'Key: {self.key},    Scale: {self.scale},    Mode: {self.mode}')
+		ax.spines['top'].set_visible(False)
+		ax.spines['right'].set_visible(False)
+		# ax.spines['bottom'].set_visible(False)
+		# ax.spines['left'].set_visible(False)
+
+		ax.text((xmin+xmax)/2, ymax, f'{self.key} {self.scale} scale', 
+			fontsize=18, ha='center')
 		ax.set_yticks([])
-		ax.set_xticks(fret_label_positions, fret_labels)
+		ax.set_xticks(fret_label_positions, fret_labels, fontsize=14)
 
 		ax.set_xlim(xmin-fretboard_adj*2,xmax)
-		# ax.set_ylim(ymin,ymax)
 		ax.set_ylim(ymin-fretboard_adj,ymax+fretboard_adj)
 
 		## draw fretboard background:
@@ -475,7 +485,7 @@ class Shredder(object):
 			ax.hlines(ymax-guitar_string-1, xmin, xmax, linestyles ='solid', color = 'grey')
 		note_counter = 1
 		for open_note in tuning_list:
-			ax.text(xmin-0.5, note_counter, open_note, ha='center', va='center', color='black', fontsize=14)
+			ax.text(xmin-0.5, note_counter, open_note, ha='center', va='center', color='black', fontsize=16)
 			note_counter+=1
 		
 		current_z = max([_.zorder for _ in ax.get_children()])
@@ -530,15 +540,16 @@ class Shredder(object):
 			counter +=1
 
 		if self.django == '1':
-			html_fig = mpld3.fig_to_html(fig)
+			html_fig = mpld3.fig_to_html(fig, figid='shredderfig')
 			return html_fig
 		else: 
 			figout = f'{self.outdir}/{self.tuning}-{self.key}-{self.scale}-{self.mode}-scale.png'
 			plt.savefig(figout, format='png', bbox_inches='tight')
 			return None
 
-		# open_image(figout)
 
+
+# def plot_empty_fretboard():
 
 
 def add_octave(current_scale):
@@ -579,8 +590,7 @@ def main(argv=sys.argv, **kwargs):
 			saved to file with django=0
 			output to html with django=1
 	"""
-	# print(args)
-	args=parse_arguments(argv)
+	args, extra_args = parse_arguments(argv)
 	### convert to dict
 	args_main = vars(args)
 	for a in args_main:
@@ -609,6 +619,27 @@ def main(argv=sys.argv, **kwargs):
 	if 'django' not in kwargs:
 		kwargs['django'] = '0'
 
+	## for custom scales:
+	if kwargs['scale'] == '*custom*':
+		## for command line extra args, add here
+		for i in range(len(extra_args)):
+			if extra_args[i] == '--scale_name':
+				scale_name = extra_args[i+1]
+			if extra_args[i] == '--scale_intervals':
+				scale_intervals = extra_args[i+1]		
+		## for kwargs, add here
+		if 'scale_name' in kwargs:
+			scale_name = kwargs['scale_name']
+		if 'scale_intervals' in kwargs:
+			scale_intervals = kwargs['scale_intervals']
+		## build custom scale
+		custom_scale = scales.Scales.build_custom_scale(
+			scale_name, scale_intervals)
+		kwargs['custom_scale'] = custom_scale
+	else:
+		kwargs['custom_scale'] = None
+
+
 	if not os.path.exists(kwargs['outdir']):
 		os.makedirs(kwargs['outdir'])
 
@@ -620,7 +651,8 @@ def main(argv=sys.argv, **kwargs):
 		fretnumber = kwargs['fretnumber'],
 		mode = kwargs['mode'],
 		outdir = kwargs['outdir'],
-		django = kwargs['django']
+		django = kwargs['django'],
+		custom_scale = kwargs['custom_scale']
 		)
 
 	tuning_list, interval_list, string_scales_list, scale_dict, degree_map_dict, int_map_dict = shredder.shred()

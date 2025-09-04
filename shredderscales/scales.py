@@ -113,11 +113,24 @@ class Scales(object):
 		11: 'M7'
 	}
 
-	# def __init__(self):
 
-		# self.scale = scale
-		# self.key = key 
-		# self.key_notes = key_notes
+	### dictionary for automated interval to degree conversion
+	## use flats to cover every position
+	interval_to_degree_dict = {
+		'P1': '1',
+		'm2': 'b2',
+		'M2': '2',
+		'm3': 'b3',
+		'M3': '3',
+		'P4': '4',
+		'A4': 'b5',
+		'P5': '5',
+		'm6': 'b6',
+		'M6': '6',
+		'm7': 'b7',
+		'M7': '7'
+	}
+
 
 	@staticmethod
 	def print_all_scales():
@@ -166,6 +179,45 @@ class Scales(object):
 			return out_scale, scale
 		else:
 			raise ValueError(f'chosen scale {scale} is not included currently')
+
+	@staticmethod
+	def build_custom_scale(scale_name, scale_intervals):
+		"""
+		given a custom scale name and intervals, build a scale entry 
+
+		Inputs:
+			- scale_name: user input name of scale, ex: 'mycustomscale'
+			- scale_intervals: string with comma seperated values for scale intervals
+				ex: '0, 1, 4, 7, 8, 10, 11'
+
+		Outputs:
+			- scale_dict: entry that is compatible with available scales:
+				- ex: 'mycustomscale' : [
+					[0,1,4,7,8,10,11], 
+					['1','b2','3','5','b6','b7','7']],
+				- list of scale intervals as first entry, int
+				- list of scale degrees as second entry, str 
+
+		"""
+
+		## convert string entry to list of ints
+		mod_scale_intervals = scale_intervals.replace(' ', '')
+		out_scale = [int(i) for i in mod_scale_intervals.split(',')]
+
+		## calculate degrees based on intervals
+		interval_list = [Scales.interval_dict[i] for i in out_scale]
+		degree_list = [Scales.interval_to_degree_dict[i] for i in interval_list]
+
+		## build custom_scale
+		custom_scale = {
+			scale_name : [
+				out_scale,
+				degree_list
+			]
+		}
+
+		return custom_scale
+
 
 
 def get_scale_notes(scale, scale_dict, key, key_notes):
@@ -229,3 +281,4 @@ def map_degrees_intervals(scale, one_oct, scale_dict, interval_dict):
 		int_map_dict[one_oct[n]] = interval_dict[n]
 
 	return degree_map_dict, int_map_dict
+
