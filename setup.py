@@ -5,7 +5,7 @@ with open("README.md", 'r') as f:
 
 setup(
 	name='shredderscales',
-	version='1.0.4',
+	version='1.0.5',
 	author='Jamie Wangen',
 	liscense='MIT',
 	url = 'https://github.com/jrw24/shredder-scales',

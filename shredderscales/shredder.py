@@ -521,7 +521,7 @@ class Shredder(object):
 			ax.hlines(ymax-guitar_string-1, xmin, xmax, linestyles ='solid', color = 'grey')
 		note_counter = 1
 		for open_note in tuning_list:
-			ax.text(xmin-0.5, note_counter, open_note, ha='center', va='center', color='black', fontsize=16*sf)
+			ax.text(xmin-0.5, note_counter, open_note, ha='center', va='center', color='black', fontsize=16)
 			note_counter+=1
 		
 		current_z = max([_.zorder for _ in ax.get_children()])
@@ -553,7 +553,7 @@ class Shredder(object):
 						ha='center', 
 						va='center', 
 						color='white',
-						fontsize=12*sf,
+						fontsize=12,
 						zorder=current_z+2)
 				if self.mode == 'degree':
 					ax.text(
@@ -563,7 +563,7 @@ class Shredder(object):
 						ha='center', 
 						va='center', 
 						color='white',
-						fontsize=12*sf,
+						fontsize=12,
 						zorder=current_z+2)
 				if self.mode == 'interval':
 					ax.text(
@@ -573,7 +573,7 @@ class Shredder(object):
 						ha='center', 
 						va='center', 
 						color='white',
-						fontsize=12*sf,
+						fontsize=12,
 						zorder=current_z+2)
 
 			counter +=1
