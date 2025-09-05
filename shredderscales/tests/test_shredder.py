@@ -42,7 +42,9 @@ def test_make_Shredder_object_all_options_included(v):
 		mode = svars['mode'],
 		outdir = svars['outdir'],
 		django = svars['django'],
-		custom_scale = None
+		custom_scale = None,
+		screenWidth = '1200',
+		screenHeight = '350'
 
 		)
 
@@ -62,7 +64,7 @@ def test_main_key_scale_tuning_only(monkeypatch):
 		'tuning': 'CGCFAD',
 		}
 
-	html_fig = shredder.main(**kwargs)
+	html_fig, scale_info = shredder.main(**kwargs)
 	assert html_fig is None
 
 def test_main_key_scale_sys_argv_entry(monkeypatch):
@@ -81,7 +83,7 @@ def test_main_key_scale_sys_argv_entry(monkeypatch):
 	kwargs = {
 		}
 
-	html_fig = shredder.main(**kwargs)
+	html_fig, scale_info = shredder.main(**kwargs)
 	assert html_fig is None
 
 
@@ -95,7 +97,7 @@ def test_main_no_key(monkeypatch):
 		'tuning': 'CGCFAD',
 		}
 	with pytest.raises(KeyError):
-		html_fig = shredder.main(**kwargs)
+		html_fig, scale_info = shredder.main(**kwargs)
 
 def test_main_no_scale(monkeypatch):
 
@@ -107,7 +109,7 @@ def test_main_no_scale(monkeypatch):
 		'tuning': 'CGCFAD',
 		}
 	with pytest.raises(KeyError):
-		html_fig = shredder.main(**kwargs)
+		html_fig, scale_info = shredder.main(**kwargs)
 
 
 def test_main_key_scale_only(monkeypatch):
@@ -120,7 +122,7 @@ def test_main_key_scale_only(monkeypatch):
 		'key': 'A'
 		}
 
-	html_fig = shredder.main(**kwargs)
+	html_fig, scale_info = shredder.main(**kwargs)
 	assert html_fig is None
 
 
@@ -136,7 +138,7 @@ def test_main_set_django_for_html_output_kwargs(monkeypatch):
 		'django': '1'
 		}
 
-	html_fig = shredder.main(**kwargs)
+	html_fig, scale_info = shredder.main(**kwargs)
 	### check that an html is output as str
 	assert type(html_fig) is str
 
@@ -156,7 +158,7 @@ def test_main_set_django_for_html_output_sys_argv(monkeypatch):
 	)
 	kwargs = {
 		}
-	html_fig = shredder.main(**kwargs)
+	html_fig, scale_info = shredder.main(**kwargs)
 	### check that an html is output as str
 	assert type(html_fig) is str
 
@@ -177,7 +179,7 @@ def test_main_custom_scale_command_line(monkeypatch):
 	kwargs = {
 		}
 
-	html_fig = shredder.main(**kwargs)
+	html_fig, scale_info = shredder.main(**kwargs)
 	assert html_fig is None
 
 
@@ -195,6 +197,6 @@ def test_main_set_django_for_html_output_kwargs_custom_scale(monkeypatch):
 		'scale_intervals': '0,1,4,7,8,10,11'
 		}
 
-	html_fig = shredder.main(**kwargs)
+	html_fig, scale_info = shredder.main(**kwargs)
 	### check that an html is output as str
 	assert type(html_fig) is str
