@@ -25,6 +25,11 @@ Shredder-scales:
 			--django: when run on django based web app, 
 				- use mpld3 to display plot instead of saving 
 				- see repo here for django app: https://github.com/jrw24/djshred
+
+		Custom scales: set --scale='*custom*' and include:
+			--scale_name: a name for the new scale
+			--scale_intervals: comma seperated list with interval spacing for each note
+				- for the major scale, enter: 0,2,4,5,7,9,11
 	Outputs:
 		- generates a png plot of the guitar scale
 
@@ -62,8 +67,13 @@ def parse_arguments(args=None):
 	parser.add_argument('-m', '--mode', default='note', help='mode to use for displaying notes: [note, degree, interval]')
 	parser.add_argument('-o', '--outdir', default=current_directory, help='directory for saving scripts' )
 	parser.add_argument('-d', '--django', default='0', help='perform plotting on django server [0,1]')
-	args, _ = parser.parse_known_args() ## return only known args
-	return args
+	parser.add_argument('-e', '--scale_name', default='0', help='scale name for a custom scale')
+	parser.add_argument('-i', '--scale_intervals', default='0', 
+		help='scale intervals for gererating a custom scale, example for major scale: 0,2,4,5,7,9,11')
+	parser.add_argument('-w', '--screenWidth', default='1200', help='screen width for figure size')
+	parser.add_argument('-x', '--screenHeight', default='350', help='screen height for figure size')
+	args, extra_args = parser.parse_known_args() ## return only known args
+	return args, extra_args
 
 
 class Shredder(object):
@@ -95,7 +105,9 @@ class Shredder(object):
 
 	"""
 
-	def __init__(self, scale, key, tuning, flats, fretnumber, mode, outdir, django):
+	def __init__(self, scale, key, tuning, flats, fretnumber, mode, outdir, 
+		django, custom_scale, screenWidth, screenHeight):
+		
 		self.scale = scale 
 		self.key = key 
 		self.tuning = tuning 
@@ -104,6 +116,9 @@ class Shredder(object):
 		self.mode = mode
 		self.outdir = outdir
 		self.django = django
+		self.custom_scale = custom_scale
+		self.screenWidth = float(screenWidth)*0.9
+		self.screenHeight = float(screenHeight)*0.9
 
 	def check_valid_tuning(self):
 		if '#' in self.tuning and 'b' in self.tuning:
@@ -359,7 +374,11 @@ class Shredder(object):
 		key_notes = notes.rearrange_notes(self.key, all_notes, self.flats) ## still has all notes
 
 		## look up scale in available scales and get the dict for that scale
-		scale_dict, self.scale = scales.Scales.get_scale_intervals(self.scale)
+		if self.scale == '*custom*':
+			scale_dict = self.custom_scale
+			self.scale = list(scale_dict.keys())[0]
+		else:
+			scale_dict, self.scale = scales.Scales.get_scale_intervals(self.scale)
 
 		## create a scale object with notes in proper order
 		scale_notes_one_octave = scales.get_scale_notes(self.scale, scale_dict, self.key, key_notes)
@@ -377,7 +396,13 @@ class Shredder(object):
 		## trim scales to fretboard size
 		string_scales_list = self.mod_fretboard(string_scales_list)
 
-		return (tuning_list, interval_list, string_scales_list, scale_dict, degree_map_dict, int_map_dict)
+		scale_info = [
+			list(degree_map_dict.keys()),
+			list(degree_map_dict.values()),
+			list(int_map_dict.values())
+		]
+
+		return (tuning_list, interval_list, string_scales_list, scale_dict, degree_map_dict, int_map_dict, scale_info)
 
 	def mod_fretboard(self, string_scales_list):
 		# octave = 12
@@ -422,7 +447,23 @@ class Shredder(object):
 			'fretboardcolor' : '#6e493982',
 		}
 
-		fig, ax = plt.subplots(figsize= (12, 3))
+		## automatically adjust figure size based on screen width:
+		fig_size_defaults = (1200.0, 350.0)
+		px = 1/plt.rcParams['figure.dpi']  # pixel in inches
+		fig_height_min = 250.0*px
+		if self.screenWidth < fig_size_defaults[0]:
+			sf = self.screenWidth/fig_size_defaults[0]
+			print('width scaling factor:', sf)
+		else:
+			sf = 1.0
+
+		fig_width_mod = fig_size_defaults[0]*sf*px
+		fig_height_mod = fig_size_defaults[1]*sf*px
+
+		if fig_height_mod < fig_height_min:
+			fig_height_mod = fig_height_min
+
+		fig, ax = plt.subplots(figsize= (fig_width_mod, fig_height_mod))
 
 		frets = range(0,int(self.fretnumber))
 		strings = range(0,len(tuning_list))
@@ -436,12 +477,17 @@ class Shredder(object):
 		fret_labels = list(range(0,self.fretnumber+1))
 		fret_label_positions = [x-fretboard_adj for x in fret_labels]
 
-		ax.set_title(f'Key: {self.key},    Scale: {self.scale},    Mode: {self.mode}')
+		ax.spines['top'].set_visible(False)
+		ax.spines['right'].set_visible(False)
+		# ax.spines['bottom'].set_visible(False)
+		# ax.spines['left'].set_visible(False)
+
+		ax.text((xmin+xmax)/2, ymax*0.975, f'{self.key} {self.scale} scale', 
+			fontsize=18*sf, ha='center',)
 		ax.set_yticks([])
-		ax.set_xticks(fret_label_positions, fret_labels)
+		ax.set_xticks(fret_label_positions, fret_labels, fontsize=14)
 
 		ax.set_xlim(xmin-fretboard_adj*2,xmax)
-		# ax.set_ylim(ymin,ymax)
 		ax.set_ylim(ymin-fretboard_adj,ymax+fretboard_adj)
 
 		## draw fretboard background:
@@ -475,7 +521,7 @@ class Shredder(object):
 			ax.hlines(ymax-guitar_string-1, xmin, xmax, linestyles ='solid', color = 'grey')
 		note_counter = 1
 		for open_note in tuning_list:
-			ax.text(xmin-0.5, note_counter, open_note, ha='center', va='center', color='black', fontsize=14)
+			ax.text(xmin-0.5, note_counter, open_note, ha='center', va='center', color='black', fontsize=16*sf)
 			note_counter+=1
 		
 		current_z = max([_.zorder for _ in ax.get_children()])
@@ -507,6 +553,7 @@ class Shredder(object):
 						ha='center', 
 						va='center', 
 						color='white',
+						fontsize=12*sf,
 						zorder=current_z+2)
 				if self.mode == 'degree':
 					ax.text(
@@ -516,6 +563,7 @@ class Shredder(object):
 						ha='center', 
 						va='center', 
 						color='white',
+						fontsize=12*sf,
 						zorder=current_z+2)
 				if self.mode == 'interval':
 					ax.text(
@@ -525,20 +573,123 @@ class Shredder(object):
 						ha='center', 
 						va='center', 
 						color='white',
+						fontsize=12*sf,
 						zorder=current_z+2)
 
 			counter +=1
 
 		if self.django == '1':
-			html_fig = mpld3.fig_to_html(fig)
+			plt.tight_layout(pad=0)
+			# mpld3.plugins.clear(fig)
+			html_fig = mpld3.fig_to_html(fig, figid='shredderfig')
 			return html_fig
 		else: 
 			figout = f'{self.outdir}/{self.tuning}-{self.key}-{self.scale}-{self.mode}-scale.png'
 			plt.savefig(figout, format='png', bbox_inches='tight')
 			return None
 
-		# open_image(figout)
 
+def plot_empty_fretboard():
+	"""
+	create a plot of an empty fretboard as a placeholder
+		This is in standard 6-string tuning with EADGBE and 24 frets
+	"""
+
+	## default inputs:
+	fretnumber=24
+	tuning_list=['E','A','D','G','B','E']
+
+
+	my_colors = { 
+		'black' :'#000000',
+		'orange' : '#ffb000',
+		'cyan' :'#63cfff',
+		'red' :'#eb4300',
+		'green' :'#00c48f',
+		'pink' :'#eb68c0',
+		'yellow' :'#fff71c',
+		'blue' :'#006eb9',
+		'fretboardcolor' : '#6e493982',
+	}
+
+	# ## automatically adjust figure size based on screen width:
+	# fig_size_defaults = (1200.0, 350.0)
+	# px = 1/plt.rcParams['figure.dpi']  # pixel in inches
+	# fig_height_min = 250.0*px
+	# if self.screenWidth < fig_size_defaults[0]:
+	# 	sf = self.screenWidth/fig_size_defaults[0]
+	# 	print('width scaling factor:', sf)
+	# else:
+	# 	sf = 1.0
+
+	# fig_width_mod = fig_size_defaults[0]*sf*px
+	# fig_height_mod = fig_size_defaults[1]*sf*px
+
+	# if fig_height_mod < fig_height_min:
+	# 	fig_height_mod = fig_height_min
+
+	# fig, ax = plt.subplots(figsize= (fig_width_mod, fig_height_mod))
+	fig, ax = plt.subplots(figsize= (12.0, 3.5) )
+	sf=1.0
+
+	frets = range(0,fretnumber)
+	strings = range(0,len(tuning_list))
+
+	xmin = -1 #0
+	xmax = fretnumber
+	ymin = 0
+	ymax = len(tuning_list)+1
+	fretboard_adj = 0.5
+	
+	fret_labels = list(range(0,fretnumber+1))
+	fret_label_positions = [x-fretboard_adj for x in fret_labels]
+
+	ax.spines['top'].set_visible(False)
+	ax.spines['right'].set_visible(False)
+
+	ax.set_yticks([])
+	ax.set_xticks(fret_label_positions, fret_labels, fontsize=14)
+
+	ax.set_xlim(xmin-fretboard_adj*2,xmax)
+	ax.set_ylim(ymin-fretboard_adj,ymax+fretboard_adj)
+
+	## draw fretboard background:
+	fretboard_bg = patches.Rectangle(
+		(0, ymin+fretboard_adj ),
+		fretnumber,
+		len(tuning_list),
+		color=my_colors['fretboardcolor'],
+		zorder=0)
+	ax.add_patch(fretboard_bg)
+
+	## add fret dots:
+	fret_dots = [3,5,7,9,12,15,17,19,21,24]
+	for dot in fret_dots:
+		if dot <= fretnumber:
+			if dot % 12 == 0:
+				# ax.scatter(dot, )
+				ax.scatter(dot-fretboard_adj, fretboard_adj*3, color='white', s=16, zorder=1)
+				ax.scatter(dot-fretboard_adj, ymax-fretboard_adj*3, color='white', s=16, zorder=1)
+				pass
+			else:
+				ax.scatter(dot-fretboard_adj, ymax/2, color='white', s=16, zorder=1)
+
+	ax.hlines(ymax-fretboard_adj, 0, xmax, linestyles ='solid', color = 'black')
+	ax.hlines(ymin+fretboard_adj, 0, xmax, linestyles ='solid', color = 'black')
+
+	for fret in frets:
+		ax.vlines(fret, ymin+0.5, ymax-0.5, linestyles = 'solid', color = 'black')
+	for guitar_string in strings:
+		ax.hlines(ymax-guitar_string-1, xmin, xmax, linestyles ='solid', color = 'grey')
+	note_counter = 1
+	for open_note in tuning_list:
+		ax.text(xmin-0.5, note_counter, open_note, ha='center', va='center', color='black', fontsize=16*sf)
+		note_counter+=1
+
+	plt.tight_layout(pad=0)
+
+	html_fig = mpld3.fig_to_html(fig, figid='empytfretboard')
+	return html_fig
 
 
 def add_octave(current_scale):
@@ -579,8 +730,7 @@ def main(argv=sys.argv, **kwargs):
 			saved to file with django=0
 			output to html with django=1
 	"""
-	# print(args)
-	args=parse_arguments(argv)
+	args, extra_args = parse_arguments(argv)
 	### convert to dict
 	args_main = vars(args)
 	for a in args_main:
@@ -608,6 +758,27 @@ def main(argv=sys.argv, **kwargs):
 		kwargs['mode'] = 'note'
 	if 'django' not in kwargs:
 		kwargs['django'] = '0'
+	if 'screenWidth' not in kwargs:
+		kwargs['screenWidth'] = '1200'
+	if 'screenHeight' not in kwargs:
+		kwargs['screenHeight'] = '350'
+
+	## for custom scales:
+	if kwargs['scale'] == '*custom*':
+		try:
+			scale_name = kwargs['scale_name']
+		except KeyError:
+			print('scale_name not entered for custom scale')
+		try:
+			scale_intervals = kwargs['scale_intervals']
+		except KeyError:
+			print('scale_intervals not entered for current_scale')
+		## build custom scale
+		custom_scale = scales.Scales.build_custom_scale(
+			scale_name, scale_intervals)
+		kwargs['custom_scale'] = custom_scale
+	else:
+		kwargs['custom_scale'] = None
 
 	if not os.path.exists(kwargs['outdir']):
 		os.makedirs(kwargs['outdir'])
@@ -620,12 +791,15 @@ def main(argv=sys.argv, **kwargs):
 		fretnumber = kwargs['fretnumber'],
 		mode = kwargs['mode'],
 		outdir = kwargs['outdir'],
-		django = kwargs['django']
+		django = kwargs['django'],
+		custom_scale = kwargs['custom_scale'],
+		screenWidth = kwargs['screenWidth'],
+		screenHeight = kwargs['screenHeight']
 		)
 
-	tuning_list, interval_list, string_scales_list, scale_dict, degree_map_dict, int_map_dict = shredder.shred()
+	tuning_list, interval_list, string_scales_list, scale_dict, degree_map_dict, int_map_dict, scale_info = shredder.shred()
 	html_fig = shredder.plotter(tuning_list, string_scales_list, scale_dict, degree_map_dict, int_map_dict)
-	return html_fig
+	return html_fig, scale_info
 
 if __name__ == '__main__':
 	main(args=sys.argv)

@@ -5,8 +5,10 @@ with open("README.md", 'r') as f:
 
 setup(
 	name='shredderscales',
-	version='1.0.3',
+	version='1.0.4',
 	author='Jamie Wangen',
+	liscense='MIT',
+	url = 'https://github.com/jrw24/shredder-scales',
 	packages=find_packages(
 		include=['shredderscales', 'shredderscales.*']),
 	install_requires=[

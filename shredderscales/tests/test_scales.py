@@ -56,8 +56,8 @@ def test_get_common_scale_major(create_scales_object, load_major_scale ):
 	out_scale = create_scales_object.get_scale_intervals(scale)
 	# print('out_scale', out_scale)
 
-	assert type(out_scale) is dict
-	assert out_scale == load_major_scale
+	assert type(out_scale[0]) is dict
+	assert out_scale[0] == load_major_scale
 
 def test_get_alias_scale_diatonic(create_scales_object, load_pentatonic_major_scale):
 
@@ -65,8 +65,8 @@ def test_get_alias_scale_diatonic(create_scales_object, load_pentatonic_major_sc
 	## diatonic maps to pentatonic major and tests alias lookup
 	out_scale = create_scales_object.get_scale_intervals(scale)
 
-	assert type(out_scale) is dict
-	assert out_scale == load_pentatonic_major_scale
+	assert type(out_scale[0]) is dict
+	assert out_scale[0] == load_pentatonic_major_scale
 
 def test_get_bogus_scale(create_scales_object):
 

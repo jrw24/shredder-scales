@@ -13,6 +13,9 @@ For example:
 * 'G#D#G#C#F#A#D#' will set drop G# 7-string tuning
 * 'F#BEADGBE' will set standard 8-string tuning
 
+If a desired scale is not present in the library, custom scales 
+can also be entered based on the intervals in the scale
+
 ## Installation
 
 Use the package manager [pip](https://pypi.org/project/pip/) for installation
@@ -36,6 +39,11 @@ pip install shredderscales
 		- interval will display the distance from root note: 'M2', 'P5', 'm6'
 	--outdir: directory for saving output plot if run locally
 	--django: set to '1' for outputing figure as html
+	
+	custom scales: set --scale='*custom*' and include:
+	--scale_name: a name for the new scale
+	--scale_intervals: comma seperated list with interval spacing for each note
+		- for the major scale, enter: 0,2,4,5,7,9,11
 
 
 ## Usage
@@ -44,6 +52,12 @@ example command line usage:
 
 ```bash
 shredder-scales --scale='major' --key='F' --tuning='CGCFAD' --outdir='/path/to/outdir'
+```
+
+example custom scale generation:
+
+```bash
+shredder-scales --scale='*custom*' --key='E' --tuning='EADGBE' --outdir='/path/to/outdir' --scale_name=new_scale --scale_intervals=0,1,4,7,8,10,11
 ```
 
 to print out all available scales:
