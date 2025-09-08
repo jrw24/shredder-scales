@@ -1,5 +1,8 @@
 # shredder-scales
 
+Available as a free web tool hosted on pythonanywhere:
+[shredder-scales](https://shredderscales.pythonanywhere.com/)
+
 shredder-scales is a python package that allows look-up of 
 guitar scales given a key, scale, and tuning and outputs
 a plot showing the valid note positions on the fretboard. 
